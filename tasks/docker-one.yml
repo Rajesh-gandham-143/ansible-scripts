@@ -1,0 +1,24 @@
+---
+- name: Copy Dockerfiles into repo directories
+  copy:
+    src: "{{ item.dockerfile }}"
+    dest: "{{ item.context }}/Dockerfile"
+    mode: '0644'
+  loop: "{{ docker_images }}"
+
+- name: Build Docker images for each service (using CLI)
+  shell: |
+    docker build -t {{ item.image_name }} -f {{ item.dockerfile }} {{ item.context }}
+  loop: "{{ docker_images }}"
+
+- name: Copy the docker-compose file
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}/docker-compose.yml"
+  loop: "{{ docker_files }}"
+
+- name: Run docker compose inside repo
+  shell: "{{ item.cmd }}"
+  args:
+    chdir: "{{ item.path }}"
+  loop: "{{ docker_compose }}"

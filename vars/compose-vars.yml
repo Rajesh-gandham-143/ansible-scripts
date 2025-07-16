@@ -1,0 +1,11 @@
+project-name: "testing"
+
+redis:
+  name: "{{ project-name }}-redis"
+  images: redis:7.2.4-alpine
+  port: 6378
+
+core-services:
+  name: "{{project-name }}-core_services"
+  image:  "{{ (docker_files | selectattr('name','equalto','core-services') | first).image_name }}"
+  

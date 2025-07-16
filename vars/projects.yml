@@ -1,0 +1,106 @@
+repos: '/home/rajesh/repos'
+ansible_project: '/home/rajesh/ansible-project'
+ssh: "/home/rajesh/.ssh"
+
+git_repos:
+  - repo_name: core-services
+    repo: "git@git.cwbos.com:cw-enterprise/services/cw-core-services.git"
+    dest: "{{ repos }}/"
+    branch: "25Q2.1.0"  
+
+  - repo_name: retail-services
+    repo: "git@git.cwbos.com:cw-enterprise/services/cw-retail-services.git"
+    dest: "{{ repos }}/"
+    branch: "25Q2.1.0"  
+
+  - repo_name: pojo-classes
+    repo: "git@git.cwbos.com:cw-enterprise/services/cw-pojo-classes.git"
+    dest: "{{ repos }}/"
+    branch: "main"  
+
+
+  - repo_name: print-templates
+    repo: "git@git.cwbos.com:cw-enterprise/services/cw-print-templates.git"
+    dest: "{{ repos }}/"
+    branch: "main"  
+
+   
+
+# ✅ pom.xml files
+pom_replacements:
+  - repo: core-services
+    src: "{{ ansible_project }}/files/core.pom.xml"
+    dest: "{{ repos }}/core-services/pom.xml"
+
+  - repo: retail-services
+    src: "{{ ansible_project }}/files/retail.pom.xml"
+    dest: "{{ repos }}/retail-services/pom.xml"
+
+
+# ✅ Only symlinks for core-services
+core_links:
+  - src: "{{ repos }}/pojo-classes/tables"
+    dest: "{{ repos }}/core-services/src/main/java/com/cw/erp/model/postgres/tables"
+
+  - src: "{{ repos }}/print-templates"
+    dest: "{{ repos }}/core-services/src/main/java/com/cw/erp/modules/cw-print-templates"
+
+maven_builds:
+  - name: core-services
+    path: "{{ repos }}/core-services"
+    cmd: "mvn clean install -DskipTests"
+
+  - name: retail-services
+    path: "{{ repos }}/retail-services"
+    cmd: "mvn clean install -DskipTests"
+
+custom_jar:
+  src: "{{ ansible_project }}/files/ConvertToCurrency.jar"
+  dest: "{{ repos }}/core-services"    
+  command: >
+    mvn install:install-file
+    -Dfile=/home/rajesh/ansible-project/files/ConvertToCurrency.jar
+    -DgroupId=com.reporter.jasper
+    -DartifactId=ConvertToWordPlugin
+    -Dversion=1.0.0
+    -Dpackaging=jar
+
+entrypoint:
+  - name: entrypoint
+    entrypath: "{{ ansible_project }}/files/entrypoint.sh"
+    entrydest: "{{ repos }}/core-services"
+
+json_file:
+  - name: json
+    src: "{{ansible_project}}/files/sproutz-food-ordering.json"
+    dest: "{{ repos }}/retail-services/src/main/resources"
+
+application_propeties:
+  - name: core_application
+    src: "{{ ansible_project }}/files/core_application.properties"
+    dest: "{{ repos }}/Compose-file/"
+
+  - name: retail_application
+    src: "{{ ansible_project }}/files/retail_application.properties"
+    dest: "{{ repos }}/Compose-file/"
+
+docker_images:
+  - name: core-services
+    context: "{{ repos }}/core-services"
+    dockerfile: "{{ ansible_project }}/files/Dockerfile.core-services"
+    image_name: "core-services:latest"
+
+  - name: retail-services
+    context: "{{ repos }}/retail-services"
+    dockerfile: "{{ ansible_project }}/files/Dockerfile.retail-services"
+    image_name: "retail-services:latest"
+
+docker_files:
+  - name: Docker-compose
+    src: "{{ ansible_project }}/files/docker-compose.yml"
+    dest: "{{ repos }}/Compose-file"
+
+docker_compose:
+  - name: compose
+    path: "{{ repos }}/Compose-file"
+    cmd: "docker compose up -d"

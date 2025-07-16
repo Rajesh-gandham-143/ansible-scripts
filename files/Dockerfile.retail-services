@@ -1,0 +1,30 @@
+## STAGE-1: Java as base image.
+#FROM adoptopenjdk/openjdk13:jre-13.0.2_8-ubuntu
+FROM eclipse-temurin:17-jre-focal
+
+# Install tzdata package to manage timezones
+RUN apt-get update && apt-get install -y tzdata
+
+# Set the timezone to India.
+RUN ln -snf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime && echo "Asia/Kolkata" > /etc/timezone
+
+# Set the TZ environment variable for Java
+ENV TZ=Asia/Kolkata
+
+# Set the timezone to Dubai
+#RUN ln -snf /usr/share/zoneinfo/Asia/Dubai /etc/localtime && echo "Asia/Dubai" > /etc/timezone
+
+# Set the TZ environment variable for Java
+#ENV TZ=Asia/Dubai
+
+# Working directory.
+WORKDIR /retail-services
+
+# Set full permissions for the application directory
+RUN chmod -R 777 /retail-services
+
+# Copy the core-services JAR file to the working directory.
+COPY ./target/*.jar retail-service.jar
+
+# Run the JAR file.
+CMD ["java", "-jar", "retail-service.jar"]

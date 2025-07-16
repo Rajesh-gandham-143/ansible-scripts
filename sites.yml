@@ -1,0 +1,28 @@
+---
+- name: Clone repos, copy Dockerfiles, build images
+  hosts: webserver
+  become: yes
+  vars_files:
+    - vars/projects.yml
+
+  tasks:
+    # - name: Install required packages
+    #   include_tasks: tasks/install-packages.yml
+
+      # - name: Checking ssh connection
+      #   include_tasks: tasks/ssh-agent.yml
+    
+    - block:
+        - name: Clone all Git repositories
+          include_tasks: tasks/services-repos.yml
+      become: false
+      become_user: rajesh
+
+
+
+    
+    - block:
+        - name: Creating docker containers
+          include_tasks: tasks/docker-one.yml
+      become: false
+      become_user: rajesh

@@ -1,0 +1,11 @@
+---
+- name: Start ssh-agent
+  shell: eval "$(ssh-agent -s)" && echo $SSH_AUTH_SOCK > /tmp/ssh_auth_sock
+  changed_when: false
+  become: yes
+
+- name: Add SSH private key
+  shell: |
+    export SSH_AUTH_SOCK=$(cat /tmp/ssh_auth_sock)
+    ssh-add "{{ ssh }}/id_rsa"
+  changed_when: false
