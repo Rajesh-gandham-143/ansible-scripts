@@ -1,11 +1,126 @@
 ---
-- name: Start ssh-agent
-  shell: eval "$(ssh-agent -s)" && echo $SSH_AUTH_SOCK > /tmp/ssh_auth_sock
-  changed_when: false
-  become: yes
+- name: Ensure .ssh directory exists for ubuntu
+  file:
+    path: "{{ ssh }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: '0700'
 
-- name: Add SSH private key
+- name: Remove broken SSH key if unreadable (optional safety)
+  file:
+    path: "{{ ssh }}/id_rsa"
+    state: absent
+  when: regenerate_ssh_key | default(false)
+
+- name: Generate SSH key pair for ubuntu user (if not exists)
+  community.crypto.openssh_keypair:
+    path: "{{ ssh }}/id_rsa"
+    type: rsa
+    size: 4096
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: '0600'
+    regenerate: full_idempotence   # ✅ only regenerate if broken or missing
+  become: true
+  become_user: "{{ user }}"
+
+- name: Ensure known_hosts file exists
+  file:
+    path: "{{ ssh }}/known_hosts"
+    state: touch
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: '0644'
+
+# ✅ Read the public key
+- name: Read public key
+  slurp:
+    src: "{{ ssh }}/id_rsa.pub"
+  register: public_key_content
+
+- set_fact:
+    my_key_only: "{{ (public_key_content.content | b64decode).split(' ')[1] }}"
+
+- debug:
+    msg: "My SSH key material: {{ my_key_only }}"
+
+# ✅ STEP 1: Fetch existing keys from GitLab
+- name: Get existing GitLab SSH keys
+  uri:
+    url: "{{ gitlab_url }}/api/v4/user/keys"
+    method: GET
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    status_code: 200
+  register: gitlab_existing_keys
+
+- set_fact:
+    gitlab_keys_only: "{{ gitlab_existing_keys.json | map(attribute='key') | map('regex_replace', '^ssh-[a-z0-9]+ ', '') | map('regex_replace', ' .+$', '') | list }}"
+
+- debug:
+    msg: "Existing GitLab SSH keys: {{ gitlab_keys_only }}"
+
+# ✅ STEP 2: Check if our key material already exists
+- set_fact:
+    key_already_present: "{{ my_key_only in gitlab_keys_only }}"
+
+- debug:
+    msg: "Key already exists in GitLab? {{ key_already_present }}"
+
+# ✅ STEP 3: Upload only if NOT present
+- name: Upload SSH key to GitLab only if not present
+  uri:
+    url: "{{ gitlab_url }}/api/v4/user/keys"
+    method: POST
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token }}"
+    body_format: json
+    body:
+      title: "{{ gitlab_key_title }}"
+      key: "{{ public_key_content.content | b64decode }}"
+    status_code: 201
+  when: not key_already_present
+  register: gitlab_response
+
+- debug:
+    var: gitlab_response.json
+  when: not key_already_present
+
+# ✅ STEP 4: Add GitLab host to known_hosts
+- name: Ensure GitLab host key is added
+  shell: ssh-keyscan -H git.cwbos.com >> {{ ssh }}/known_hosts
+  args:
+    creates: "{{ ssh }}/known_hosts"
+
+# ✅ Create SSH config for GitLab
+- name: Create SSH config for GitLab
+  copy:
+    dest: "{{ ssh }}/config"
+    content: |
+      Host git.cwbos.com
+        HostName git.cwbos.com
+        User git
+        IdentityFile {{ ssh }}/id_rsa
+        StrictHostKeyChecking no
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: '0600'
+
+# ✅ Test SSH connection
+- name: Test GitLab SSH connection
+  shell: ssh -o StrictHostKeyChecking=no -T git@git.cwbos.com || true
+  register: ssh_test
+
+- debug:
+    var: ssh_test.stdout
+
+# ✅ Add key to ssh-agent
+- name: Start ssh-agent and add private key
   shell: |
-    export SSH_AUTH_SOCK=$(cat /tmp/ssh_auth_sock)
-    ssh-add "{{ ssh }}/id_rsa"
-  changed_when: false
+    eval "$(ssh-agent -s)"
+    ssh-add {{ ssh }}/id_rsa
+  args:
+    executable: /bin/bash
+  become: true
+  become_user: "{{ user }}"
