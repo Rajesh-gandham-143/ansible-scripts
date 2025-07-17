@@ -1,2 +1,4 @@
 *.properties
 *.json
+sensitive.txt 
+hosts.ini
