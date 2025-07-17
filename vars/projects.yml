@@ -1,7 +1,13 @@
-repos: '/home/rajesh/repos'
+user: "ubuntu"
+repos: '/home/ubuntu/repos'
 ansible_project: '/home/rajesh/ansible-project'
-ssh: "/home/rajesh/.ssh"
+ssh: "/home/ubuntu/.ssh"
+ssh_key_path: "/home/ubuntu/.ssh/id_rsa"
+gitlab_url: "https://git.cwbos.com"
+gitlab_token: ""   # Replace with your PAT
+gitlab_key_title: "slave-server-key"
 
+###############################################CLONING GIT REPOS###############################################################################
 git_repos:
   - repo_name: core-services
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-core-services.git"
@@ -18,14 +24,27 @@ git_repos:
     dest: "{{ repos }}/"
     branch: "main"  
 
-
   - repo_name: print-templates
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-print-templates.git"
     dest: "{{ repos }}/"
     branch: "main"  
 
-   
+  - repo_name: cw-core-fronend
+    repo: "git@git.cwbos.com:cw-plg/front-end/cw-core-front-end.git"
+    dest: "{{ repos }}/"
+    branch: "25Q2.1.0"
 
+  - repo_name: cw-pos-fronend
+    repo: "git@git.cwbos.com:cw-plg/fork-plg-pos.git"
+    dest: "{{ repos }}/"
+    branch: "25Q2.1.0"
+
+  - repo_name: cw-hub-fronend
+    repo: "git@git.cwbos.com:cw-hub/cw-api-hub/cw-api-hub.git"
+    dest: "{{ repos }}/"
+    branch: "25Q2.1.0"
+      
+############################################### SERVICES ###############################################################################
 # ✅ pom.xml files
 pom_replacements:
   - repo: core-services
@@ -45,6 +64,7 @@ core_links:
   - src: "{{ repos }}/print-templates"
     dest: "{{ repos }}/core-services/src/main/java/com/cw/erp/modules/cw-print-templates"
 
+#MAVEN BUILDS
 maven_builds:
   - name: core-services
     path: "{{ repos }}/core-services"
@@ -54,6 +74,7 @@ maven_builds:
     path: "{{ repos }}/retail-services"
     cmd: "mvn clean install -DskipTests"
 
+#CUSTOM JAT INSTALLATION
 custom_jar:
   src: "{{ ansible_project }}/files/ConvertToCurrency.jar"
   dest: "{{ repos }}/core-services"    
@@ -65,16 +86,19 @@ custom_jar:
     -Dversion=1.0.0
     -Dpackaging=jar
 
+#ENTRY POINT FOR CORE-SERVICES
 entrypoint:
   - name: entrypoint
     entrypath: "{{ ansible_project }}/files/entrypoint.sh"
     entrydest: "{{ repos }}/core-services"
 
+#CUSTOM JSON FILE FOR RETAIL SERVICES
 json_file:
   - name: json
     src: "{{ansible_project}}/files/sproutz-food-ordering.json"
     dest: "{{ repos }}/retail-services/src/main/resources"
 
+#APPLICATION PROPERTIES
 application_propeties:
   - name: core_application
     src: "{{ ansible_project }}/files/core_application.properties"
@@ -84,6 +108,11 @@ application_propeties:
     src: "{{ ansible_project }}/files/retail_application.properties"
     dest: "{{ repos }}/Compose-file/"
 
+############################################### FRONTEND #############################################################################
+
+############################################### DOCKER ###############################################################################
+
+#DOCKER IMAGES
 docker_images:
   - name: core-services
     context: "{{ repos }}/core-services"
@@ -95,6 +124,7 @@ docker_images:
     dockerfile: "{{ ansible_project }}/files/Dockerfile.retail-services"
     image_name: "retail-services:latest"
 
+#DOCKER COMPOSE FILE
 docker_files:
   - name: Docker-compose
     src: "{{ ansible_project }}/files/docker-compose.yml"
@@ -104,3 +134,4 @@ docker_compose:
   - name: compose
     path: "{{ repos }}/Compose-file"
     cmd: "docker compose up -d"
+
