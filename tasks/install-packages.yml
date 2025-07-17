@@ -46,6 +46,7 @@
       - git
       - maven
       - python3-pip
+      - nginx
     state: present
 
 - name: Add Docker’s official GPG key
@@ -85,6 +86,13 @@
   become: yes
   systemd:
     name: docker
+    state: started
+    enabled: yes
+
+- name: Ensure nginx service is running
+  become: yes
+  systemd:
+    name: nginx
     state: started
     enabled: yes
 
