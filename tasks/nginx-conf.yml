@@ -1,0 +1,31 @@
+---
+- name: Generate Nginx config for frontends
+  template:
+    src: templates/nginx-frontend.conf.j2
+    dest: /etc/nginx/sites-available/frontends.conf
+  notify: Restart Nginx
+
+- name: Enable site
+  file:
+    src: /etc/nginx/sites-available/frontends.conf
+    dest: /etc/nginx/sites-enabled/frontends.conf
+    state: link
+  notify: Restart Nginx
+
+- name: Test Nginx config
+  command: nginx -t
+  register: nginx_test
+  failed_when: nginx_test.rc != 0
+
+
+- name: Debug nginx test
+  debug:
+    var: nginx_test.stdout
+
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted
+
+
+
