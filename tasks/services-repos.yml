@@ -22,8 +22,8 @@
     key_file: "{{ ssh }}/id_rsa"
   loop: "{{ repo_stats.results }}"
   when: not item.stat.exists   # ✅ Only clone if directory does NOT exist
-  environment:
-    SSH_AUTH_SOCK: "{{ lookup('file', '/tmp/ssh_auth_sock') }}"
+  # environment:
+  #   GIT_SSH_COMMAND: "ssh -i {{ ssh }}/id_rsa -o StrictHostKeyChecking=no"
   become: false
 
  
