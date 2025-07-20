@@ -115,12 +115,4 @@
 - debug:
     var: ssh_test.stdout
 
-# ✅ Add key to ssh-agent
-- name: Start ssh-agent and add private key
-  shell: |
-    eval "$(ssh-agent -s)"
-    ssh-add {{ ssh }}/id_rsa
-  args:
-    executable: /bin/bash
-  become: true
-  become_user: "{{ user }}"
+
