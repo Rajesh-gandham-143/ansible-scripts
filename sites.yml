@@ -6,11 +6,11 @@
     - vars/projects.yml
 
   tasks:
-    # - name: Install required packages
-    #   include_tasks: tasks/install-packages.yml
+    - name: Install required packages
+      include_tasks: tasks/install-packages.yml
 
-      # - name: Checking ssh connection
-      #   include_tasks: tasks/ssh-agent.yml
+    - name: Checking ssh connection
+      include_tasks: tasks/ssh-agent.yml
     
     - block:
         - name: Clone all Git repositories
@@ -18,11 +18,24 @@
       become: false
       become_user: rajesh
 
+    - block:
+        - name: Copying env to respective folders
+          include_tasks: tasks/frontend-repos.yml
+      become: true
+      become_user: rajesh
 
-
+    - name: Configuring the nginx url's
+      include_tasks: tasks/nginx-conf.yml
     
     - block:
         - name: Creating docker containers
           include_tasks: tasks/docker-one.yml
       become: false
       become_user: rajesh
+
+  handlers:
+    - name: Restart Nginx
+      become: yes
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
