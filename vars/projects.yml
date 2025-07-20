@@ -1,58 +1,84 @@
-user: "ubuntu"
-repos: '/home/ubuntu/repos'
+############################################################# VARIABLES ########################################################################
+user: "rajesh"   # ownership of files
+
+##### define the path of master server
+
 ansible_project: '/home/rajesh/ansible-project'
-ssh: "/home/ubuntu/.ssh"
-ssh_key_path: "/home/ubuntu/.ssh/id_rsa"
+env: '/home/rajesh/ansible-project/files/envs'
+
+##### define the path of slave server
+
+repos: '/home/rajesh/repos'
+ssh: "/home/rajesh/.ssh"
+ssh_key_path: "/home/rajesh/.ssh/id_rsa"
+
+##### add git related information
+
 gitlab_url: "https://git.cwbos.com"
 gitlab_token: ""   # Replace with your PAT
 gitlab_key_title: "slave-server-key"
+############################################### CREATING NGINX CONF ###########################################################################
+frontends:
+  - name: core
+    port: 3001
+  - name: pos
+    port: 3002
+  - name: auth
+    port: 3003
+  - name: hub
+    port: 3004
 
 ###############################################CLONING GIT REPOS###############################################################################
 git_repos:
   - repo_name: core-services
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-core-services.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "25Q2.1.0"  
 
   - repo_name: retail-services
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-retail-services.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "25Q2.1.0"  
 
   - repo_name: pojo-classes
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-pojo-classes.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "main"  
 
   - repo_name: print-templates
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-print-templates.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "main"  
 
   - repo_name: cw-core-fronend
     repo: "git@git.cwbos.com:cw-plg/front-end/cw-core-front-end.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "25Q2.1.0"
 
   - repo_name: cw-pos-fronend
     repo: "git@git.cwbos.com:cw-plg/fork-plg-pos.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "25Q2.1.0"
+
+  - repo_name: cw-auth-fronend
+    repo: "git@git.cwbos.com:cw-plg/middle-ware/cw-auth.git"
+    dest: "{{ repos }}"
+    branch: "main"
 
   - repo_name: cw-hub-fronend
     repo: "git@git.cwbos.com:cw-hub/cw-api-hub/cw-api-hub.git"
-    dest: "{{ repos }}/"
+    dest: "{{ repos }}"
     branch: "25Q2.1.0"
       
 ############################################### SERVICES ###############################################################################
 # ✅ pom.xml files
 pom_replacements:
   - repo: core-services
-    src: "{{ ansible_project }}/files/core.pom.xml"
+    src: "{{ ansible_project }}/files/pom_files/core.pom.xml"
     dest: "{{ repos }}/core-services/pom.xml"
 
   - repo: retail-services
-    src: "{{ ansible_project }}/files/retail.pom.xml"
+    src: "{{ ansible_project }}/files/pom_files/retail.pom.xml"
     dest: "{{ repos }}/retail-services/pom.xml"
 
 
@@ -101,14 +127,27 @@ json_file:
 #APPLICATION PROPERTIES
 application_propeties:
   - name: core_application
-    src: "{{ ansible_project }}/files/core_application.properties"
+    src: "{{ ansible_project }}/files/properties_files/core_application.properties"
     dest: "{{ repos }}/Compose-file/"
 
   - name: retail_application
-    src: "{{ ansible_project }}/files/retail_application.properties"
+    src: "{{ ansible_project }}/files/properties_files/retail_application.properties"
     dest: "{{ repos }}/Compose-file/"
 
 ############################################### FRONTEND #############################################################################
+envs:
+  - name: Core_frontend_env
+    src: "{{ env }}/frontend"
+    dest: "{{ repos }}/cw-core-fronend/.env"
+  - name: pos_frontend_env
+    src: "{{ env }}/pos"
+    dest: "{{ repos }}/cw-pos-fronend/.env"
+  - name: auth_frontend_env
+    src: "{{ env }}/auth"
+    dest: "{{ repos }}/cw-auth-fronend/.env"
+  - name: hub_frontend_env
+    src: "{{ env }}/hub"
+    dest: "{{ repos }}/cw-hub-fronend/.env"
 
 ############################################### DOCKER ###############################################################################
 
@@ -116,18 +155,18 @@ application_propeties:
 docker_images:
   - name: core-services
     context: "{{ repos }}/core-services"
-    dockerfile: "{{ ansible_project }}/files/Dockerfile.core-services"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.core-services"
     image_name: "core-services:latest"
 
   - name: retail-services
     context: "{{ repos }}/retail-services"
-    dockerfile: "{{ ansible_project }}/files/Dockerfile.retail-services"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.retail-services"
     image_name: "retail-services:latest"
 
 #DOCKER COMPOSE FILE
 docker_files:
   - name: Docker-compose
-    src: "{{ ansible_project }}/files/docker-compose.yml"
+    src: "{{ ansible_project }}/files/docker_files/docker-compose.yml"
     dest: "{{ repos }}/Compose-file"
 
 docker_compose:
