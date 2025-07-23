@@ -1,0 +1,116 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - postgresql-{{ postgres_version }}
+      - postgresql-client-{{ postgres_version }}
+    state: present
+    update_cache: yes
+
+- name: Change PostgreSQL port
+  lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+    regexp: "^#?port ="
+    line: "port = {{ postgres_port }}"
+  notify: Restart PostgreSQL cluster
+
+
+- name: Allow remote connections (optional)
+  lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+    regexp: "^#?listen_addresses ="
+    line: "listen_addresses = '*'"
+  notify: Restart PostgreSQL cluster
+
+- name: Allow remote access for PostgreSQL with md5 auth
+  lineinfile:
+    path: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    line: "host all all 0.0.0.0/0 md5"
+    insertafter: EOF
+  notify: Restart PostgreSQL cluster
+
+- name: Ensure PostgreSQL service is running
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Restart PostgreSQL cluster after config change
+  command: pg_ctlcluster {{ postgres_version }} main restart
+
+- name: Set password for postgres superuser
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: postgres
+    password: "{{ postgres_password }}"
+    login_unix_socket: "/var/run/postgresql"   # ✅ only directory
+    port: "{{ postgres_port }}"   
+
+
+# ✅ 7. Restart cluster to apply port + remote access
+- name: Restart PostgreSQL cluster after setting password
+  command: pg_ctlcluster {{ postgres_version }} main restart
+
+# ✅ 8. Check if DB already exists (remote connection via md5)
+- name: Check if DB already exists
+  community.postgresql.postgresql_info:
+    login_user: postgres
+    login_password: "{{ postgres_password }}"
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+  register: pg_info
+  failed_when: false  # Don't fail if DB doesn't exist yet
+
+# ✅ 9. Create DB user with SAME password as postgres
+- name: Create DB user if not exists
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ postgres_password }}"   # SAME PASSWORD as postgres
+    login_user: postgres
+    login_password: "{{ postgres_password }}"
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+    state: present
+
+- name: Create tad user with full superuser privileges
+  community.postgresql.postgresql_user:
+    name: tad
+    password: "{{ tad_password }}"
+    role_attr_flags: SUPERUSER,CREATEDB,CREATEROLE,REPLICATION
+    login_user: postgres
+    login_password: "{{ postgres_password }}"
+    login_host: localhost
+    port: "{{ postgres_port }}"
+    state: present
+
+
+# ✅ 10. Create DB only if it does NOT exist
+- name: Create DB only if missing
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+    login_user: postgres
+    login_password: "{{ postgres_password }}"
+    login_host: "{{ postgres_host }}"
+    login_port: "{{ postgres_port }}"
+    state: present
+  when: pg_info.databases is not defined or db_name not in pg_info.databases
+
+
+- name: Copy DB dump file to remote server
+  ansible.builtin.copy:
+    src: files/test.pgdump   # on control node
+    dest: /tmp/test.pgdump   # on remote server
+    owner: postgres
+    group: postgres
+    mode: '0644'
+
+- name: Restore DB from custom pgdump
+  ansible.builtin.command: >
+    pg_restore -h localhost
+              -p {{postgres_port}}
+              -U postgres
+              -d {{db_name}}
+              -v /tmp/test.pgdump
+  environment:
+    PGPASSWORD: "{{ postgres_password }}"
