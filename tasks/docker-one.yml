@@ -6,18 +6,35 @@
     mode: '0644'
   loop: "{{ docker_images }}"
 
-- name: Build Docker images for each service (using CLI)
+- name: Build Docker images for each service (using CLI)/
+  become: yes
   shell: |
-    docker build -t {{ item.image_name }} -f {{ item.dockerfile }} {{ item.context }}
+    docker build -t {{ item.image_name }}  {{ item.context }}
   loop: "{{ docker_images }}"
 
 - name: Copy the docker-compose file
-  copy:
+  template:
     src: "{{ item.src }}"
-    dest: "{{ item.dest }}/docker-compose.yml"
+    dest: "{{ item.dest }}"
   loop: "{{ docker_files }}"
 
+- name: Ensure log  directories exist
+  file:
+    path: "{{ item.dest }}"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: '0755'
+  loop: "{{ log_repos }}"
+
+- name: Copy the conf files to compose directory
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+  loop: "{{ frontend_conf }}"
+
 - name: Run docker compose inside repo
+  become: true
   shell: "{{ item.cmd }}"
   args:
     chdir: "{{ item.path }}"
