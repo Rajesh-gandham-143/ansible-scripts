@@ -1,0 +1,24 @@
+## STAGE-1: Node as base image.
+FROM node:14.18.2-alpine AS Builder
+
+# Working directory.
+WORKDIR /core-frontend
+
+# Copy the cloned repo to the working directory.
+COPY ./ ./
+
+# Install the node modules and create the production optimized build.
+RUN npm install
+RUN npm run build
+
+## STAGE-2: Nginx as final image.
+FROM nginx:1.24-alpine
+
+# Install the timezone package and copy the specific Time Zone file to etc.
+RUN apk add --no-cache tzdata && cp /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+
+# Install the timezone package and copy the specific Time Zone file to etc.
+#RUN apk add --no-cache tzdata && cp /usr/share/zoneinfo/Asia/Dubai /etc/localtime
+
+# Copy the static contents from Builder stage.
+COPY --from=Builder /core-frontend/build/ /usr/share/nginx/html/

@@ -1,0 +1,70 @@
+# STAGE-1: builder
+FROM node:20.18.2-slim AS builder
+
+# Install minimal dependencies for Puppeteer/Chromium (for PDF generation)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-freefont-ttf \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libnss3 \
+    ca-certificates \
+    tzdata \
+    && ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime \
+    && echo "Asia/Kolkata" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/lib/chromium/chromium
+
+WORKDIR /auth
+
+# Copy package files for caching
+COPY package*.json ./
+
+# Install dependencies (Puppeteer included from package.json)
+RUN npm install --legacy-peer-deps
+
+# Copy app code
+COPY . .
+
+# Build Next.js app
+RUN npm run build && mv .next/standalone ./
+
+# STAGE-2: runtime
+FROM node:20.18.2-slim
+
+# Install minimal dependencies for Chromium (for PDF generation)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-freefont-ttf \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libnss3 \
+    ca-certificates \
+    tzdata \
+    && ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime \
+    && echo "Asia/Kolkata" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Puppeteer
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/lib/chromium/chromium \
+    PUPPETEER_CACHE_DIR=/root/.cache/puppeteer
+
+WORKDIR /auth
+
+# Copy built assets
+COPY --from=builder /auth/public/ ./public/
+COPY --from=builder /auth/standalone/ ./
+COPY --from=builder /auth/.next/ ./.next/
+
+# Expose port
+#EXPOSE 3000
+
+# Start app
+#CMD ["node", "server.js"]
