@@ -1,7 +1,7 @@
 ---
-- name: Copy the env files
-  copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
+- name: Copy and render environment template for each repo
+  template:
+    src: "{{ item.src }}"     # Jinja2 template path
+    dest: "{{ item.dest }}"   # Destination on server
     mode: "0644"
   loop: "{{ envs }}"
