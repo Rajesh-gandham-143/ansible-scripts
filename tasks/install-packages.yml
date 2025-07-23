@@ -13,6 +13,11 @@
       - runc
     state: absent
 
+- name: Update apt cache
+  become: yes
+  apt:
+    update_cache: yes
+
 - name: Install OpenJDK 17
   become: yes
   apt:
@@ -47,6 +52,11 @@
       - maven
       - python3-pip
       - nginx
+      - certbot
+      - python3-certbot-nginx
+      - python3-psycopg2
+      - postgresql-{{ postgres_version }}
+      - postgresql-client-{{ postgres_version }}
     state: present
 
 - name: Add Docker’s official GPG key
@@ -108,3 +118,8 @@
     name: "{{ ansible_user_id }}"
     groups: docker
     append: yes
+
+
+- name: Verify Docker is working (using sudo for current session)
+  become: yes
+  shell: docker ps
