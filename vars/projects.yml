@@ -44,15 +44,9 @@ ssh_key_path: "/home/ubuntu/.ssh/id_rsa"
 ############################################### ADD GIT RELATED INFORMATION ##############################################################
 
 gitlab_url: "https://git.cwbos.com"
-<<<<<<< HEAD
 gitlab_token: ""   # Replace with your PAT
-gitlab_key_title: "slave-server-key"
-############################################### CREATING NGINX CONF ###########################################################################
-=======
-gitlab_token: " "   # Replace with your PAT
 gitlab_key_title: "slave-server-key"         ##CHANGE THE TITILE FOR DIFFERENT SERVERS
 ############################################### CREATING NGINX CONF #######################################################################
->>>>>>> 8166316 (main varaible file)
 frontends:
   - name: core
     subdomain: ""
