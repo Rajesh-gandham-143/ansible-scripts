@@ -1,0 +1,100 @@
+version: '3.3'
+
+services:
+  {{ redis_container }}:
+    image: redis:{{ redis_version }}
+    container_name: {{ redis_container }}
+    ports:
+      - "{{ redis_port }}:{{ redis_port }}"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--port", "{{ redis_port }}"]
+    networks:
+      - {{ network_name }}
+
+    restart: unless-stopped    
+
+  {{ core_services_container }}:
+    image: {{ core_services_image }}
+    container_name: {{ core_services_container }}
+    ports:
+      - "{{ core_services_port }}:{{ core_services_port }}"
+    depends_on:
+      - {{ redis_container }}
+    volumes:
+      - ./core_application.properties:/core-services/application.properties
+      - {{ print_templates_path }}:/core-services/src/main/java/com/cw/erp/modules/cw-print-templates
+      - ./core-service-logs:/core-services/cwbackoffice
+      - {{ release_management_path }}:/core-services/Release_management/
+      - {{ ssh_key_path }}:/root/.ssh/id_rsa:ro
+      - {{ known_hosts_path }}:/root/.ssh/known_hosts:ro
+    command: ["java", "-jar", "/core-services/core-services.jar"]
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+
+  {{ retail_services_container }}:
+    image: {{ retail_services_image }}
+    container_name: {{ retail_services_container }}
+    ports:
+      - "{{ retail_services_port }}:{{ retail_services_port }}"
+    depends_on:
+      - {{ redis_container }}
+    volumes:
+      - ./retail_application.properties:/retail-services/application.properties
+      - ./retail-logs:/retail-services/cwretail
+    command: ["java", "-jar", "/retail-services/retail-service.jar"]
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+
+  {{ pos_frontend_container }}:
+    image: {{ pos_frontend_image }}
+    container_name: {{ pos_frontend_container }}
+    ports:
+      - "{{ pos_frontend_port }}:{{ pos_frontend_port }}"
+    volumes:
+      - ./pos-nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+  
+
+  {{ core_frontend_container }}:
+    image: {{ core_frontend_image }}
+    container_name: {{ core_frontend_container }}
+    ports:
+      - "{{ core_frontend_port }}:{{ core_frontend_port }}"
+    volumes:
+      - ./core-nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+
+  {{ auth_frontend_container }}:
+    image: {{ auth_frontend_image }}
+    container_name: {{ auth_frontend_container }}
+    ports:
+      - "{{ auth_frontend_port }}:3000"
+    command: ["node", "server.js"]
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+
+  {{ hub_frontend_container }}:
+    image: {{ hub_frontend_image }}
+    container_name: {{ hub_frontend_container }}
+    ports:
+      - "{{ hub_frontend_port }}:3002"
+    command: ["npm", "run", "dev"]
+    networks:
+      - {{ network_name }}
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  {{ network_name }}:
+    driver: bridge
