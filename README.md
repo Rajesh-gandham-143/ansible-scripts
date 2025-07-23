@@ -36,6 +36,7 @@ PostgreSQL installed if you want to restore the database locally
 
 
 2️⃣ Variables to Configure
+
 The main configuration is inside the vars/ folder. You need to update the following files:
 
 🔹 vars/projects.yml
