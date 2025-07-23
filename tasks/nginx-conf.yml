@@ -2,16 +2,16 @@
 - name: Generate Nginx config for frontends
   template:
     src: templates/nginx-frontend.conf.j2
-    dest: /etc/nginx/sites-available/frontends.conf
+    dest: "/etc/nginx/sites-available/{{base_domain}}.conf"
   notify: Restart Nginx
 
 - name: Enable site
   file:
-    src: /etc/nginx/sites-available/frontends.conf
-    dest: /etc/nginx/sites-enabled/frontends.conf
+    src: "/etc/nginx/sites-available/{{base_domain}}.conf"
+    dest: "/etc/nginx/sites-enabled/{{base_domain}}.conf"
     state: link
   notify: Restart Nginx
-
+    
 - name: Test Nginx config
   command: nginx -t
   register: nginx_test
@@ -29,3 +29,13 @@
 
 
 
+- name: Obtain SSL certs for all domains
+  command: >
+    certbot --nginx
+    {% for d in certbot_subdomains %} -d {{ d }}{% endfor %}
+    --agree-tos --no-eff-email --email {{ certbot_email }} --non-interactive
+  register: certbot_result
+  changed_when: "'Congratulations!' in certbot_result.stdout"
+
+- debug:
+    var: certbot_result.stdout
