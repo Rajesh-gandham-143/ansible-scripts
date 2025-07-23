@@ -114,5 +114,3 @@
 
 - debug:
     var: ssh_test.stdout
-
-
