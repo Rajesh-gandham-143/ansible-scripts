@@ -1,19 +1,61 @@
 ---
+# ✅ Always ensure the main repos directory exists with ubuntu ownership
+- name: Ensure /home/ubuntu/repos exists
+  become: yes
+  file:
+    path: "{{ repos }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+# ✅ Ensure composefile directories with correct ownership
+- name: Create nested directory
+  become: yes
+  file:
+    path: "{{ composefile }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Create release management directory
+  become: yes
+  file:
+    path: "{{ composefile }}/Release_management"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Create and ensure repo for application_properties
+  become: yes
+  file:
+    path: "{{ composefile }}/Compose-file"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+# ✅ Ensure base directories for each repo exist with ubuntu ownership
 - name: Ensure destination base directories exist
+  become: yes
   file:
     path: "{{ item.dest }}"
     state: directory
-    owner: "{{ user }}"
-    group: "{{ user }}"
+    owner: ubuntu
+    group: ubuntu
     mode: '0755'
   loop: "{{ git_repos }}"
 
+# ✅ Check if repo directories already exist
 - name: Check if repo directories already exist
   stat:
     path: "{{ item.dest }}/{{ item.repo_name }}"
   loop: "{{ git_repos }}"
   register: repo_stats
 
+# ✅ Clone Git repositories only if not already present (as ubuntu)
 - name: Clone Git repositories if not already present
   ansible.builtin.git:
     repo: "{{ item.item.repo }}"
@@ -21,88 +63,86 @@
     version: "{{ item.item.branch }}"
     key_file: "{{ ssh }}/id_rsa"
   loop: "{{ repo_stats.results }}"
-  when: not item.stat.exists   # ✅ Only clone if directory does NOT exist
-  # environment:
-  #   GIT_SSH_COMMAND: "ssh -i {{ ssh }}/id_rsa -o StrictHostKeyChecking=no"
-  become: false
+  when: not item.stat.exists
+  environment:
+    GIT_SSH_COMMAND: "ssh -i {{ ssh }}/id_rsa -o StrictHostKeyChecking=no"
 
- 
-# - name: Clone Git repositories
-#   ansible.builtin.git:
-#     repo: "{{ item.repo }}"
-#     dest: "{{ item.dest }}/{{ item.repo_name }}"
-#     version: "{{ item.branch }}"
-#     key_file: "{{ ssh }}/id_rsa"
-#   loop: "{{ git_repos }}"
-#   environment:
-#     SSH_AUTH_SOCK: "{{ lookup('file', '/tmp/ssh_auth_sock') }}"
-#   become: false
-
+# ✅ Symlinks with correct ownership
 - name: Symlink pojo-classes into core-services
   file:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
     state: link
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ core_links }}"
 
 - name: Symlink print-templates into core-services
   file:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
-    state: link    
+    state: link
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ core_links }}"
 
+# ✅ Replace pom.xml files
 - name: Replace pom.xml files
   copy:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
     mode: '0644'
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ pom_replacements }}"
 
+# ✅ Copy missing custom JAR file
 - name: Copy missing custom JAR file
   copy:
     src: "{{ custom_jar.src }}"
     dest: "{{ custom_jar.dest }}"
     mode: '0644'
+    owner: ubuntu
+    group: ubuntu
 
+# ✅ Copy json files into retail
 - name: Copy json file into retail
   copy:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ json_file }}"
 
+# ✅ Install custom JAR into Maven local repo (run as ubuntu)
 - name: Install custom JAR into Maven local repo
   shell: "{{ custom_jar.command }}"
+  args:
+    chdir: "{{ custom_jar.dest }}"
 
-- name: create and ensure repo for application_propeties
-  file:
-    path: "{{ repos }}/Compose-file"
-    state: directory 
-    mode: '0755'
-    owner: "{{ user }}"
-  loop: "{{ application_propeties }}"
-
-- name: extract the application_propeties
-  copy:
+# ✅ Extract application_properties templates
+- name: Extract application_properties
+  template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}/{{ item.name }}.properties"
+    mode: "0664"
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ application_propeties }}"
 
+# ✅ Run Maven build commands (as ubuntu)
 - name: Run build command inside repo
   shell: "{{ item.cmd }}"
   args:
     chdir: "{{ item.path }}"
   loop: "{{ maven_builds }}"
 
-- name: copy entrypoint.sh file into the core-services
+# ✅ Copy entrypoint.sh into core-services
+- name: Copy entrypoint.sh file into core-services
   copy:
     src: "{{ item.entrypath }}"
     dest: "{{ item.entrydest }}/entrypoint.sh"
-    mode: '0644'
+    mode: '0755'
+    owner: ubuntu
+    group: ubuntu
   loop: "{{ entrypoint }}"
-
-
-
-
-
-    
