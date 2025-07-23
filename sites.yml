@@ -1,13 +1,20 @@
 ---
-- name: Clone repos, copy Dockerfiles, build images
+- name: CW-SUITE INSTANCE CREATION
   hosts: webserver
   become: yes
   vars_files:
     - vars/projects.yml
+    - vars/compose-vars.yml
 
   tasks:
     - name: Install required packages
-      include_tasks: tasks/install-packages.yml
+      include_tasks: tasks/install-packages.yml 
+
+    - name: Configuring the nginx url's
+      include_tasks: tasks/nginx-conf.yml
+
+    - name: Configuring and Creating postgres DATABASE
+      include_tasks: tasks/postgres-db.yml
 
     - name: Checking ssh connection
       include_tasks: tasks/ssh-agent.yml
@@ -15,27 +22,28 @@
     - block:
         - name: Clone all Git repositories
           include_tasks: tasks/services-repos.yml
-      become: false
-      become_user: rajesh
+      become_user: ubuntu
+      become: true   
 
     - block:
         - name: Copying env to respective folders
           include_tasks: tasks/frontend-repos.yml
+      become_user: ubuntu
       become: true
-      become_user: rajesh
-
-    - name: Configuring the nginx url's
-      include_tasks: tasks/nginx-conf.yml
     
     - block:
         - name: Creating docker containers
           include_tasks: tasks/docker-one.yml
-      become: false
-      become_user: rajesh
+      become_user: ubuntu
+      become: true  
 
+  
   handlers:
     - name: Restart Nginx
       become: yes
       ansible.builtin.service:
         name: nginx
         state: restarted
+
+    - name: Restart PostgreSQL cluster
+      command: pg_ctlcluster 16 main restart
