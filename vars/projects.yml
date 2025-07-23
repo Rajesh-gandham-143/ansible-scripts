@@ -1,112 +1,166 @@
 ############################################################# VARIABLES ########################################################################
-user: "rajesh"   # ownership of files
+##   ansible-galaxy collection install community.postgresql  
 
-##### define the path of master server
+# need to execute this command one time in master server for postgres
+
+user: "ubuntu"   # ownership of files
+
+############################################################# MAIN URL #########################################################################
+
+base_domain: 'ansible.cwcloud.in'
+main_domain: '.cwcloud.in'
+
+certbot_email: 'rajesh.g@exceloid.com'
+certbot_subdomains:
+  - "{{ base_domain }}"
+  - "pos.{{ base_domain }}"
+  - "apps.{{ base_domain }}"
+  - "hub.{{ base_domain }}"
+  - "services.{{ base_domain }}"
+############################################### DOCKER PART ##############################################################################
+docker_name: 'ansible' # THIS IS TO DEFINE THE NAME OF CONTAINERS AND IMAGES IN DOCKER  
+
+############################################################# DATABASE RELATED INFORMATION ##############################################
+postgres_version: 16
+postgres_port: 8641         
+postgres_host: 157.180.85.90
+postgres_password: "ansible@123"
+db_name: "{{docker_name}}"
+db_user: postgres
+
+tad_password: "exceloid@123"
+############################################### DEFINE THE PATH OF MASTER SERVER #########################################################
 
 ansible_project: '/home/rajesh/ansible-project'
-env: '/home/rajesh/ansible-project/files/envs'
+templates: '/home/rajesh/ansible-project/templates'
 
-##### define the path of slave server
+############################################### DEFINE THE PATH OF SLAVE SERVER ##########################################################
 
-repos: '/home/rajesh/repos'
-ssh: "/home/rajesh/.ssh"
-ssh_key_path: "/home/rajesh/.ssh/id_rsa"
+repos: '/home/ubuntu/repos'                  
+composefile: '/home/ubuntu/ansible'          ##NEED TO CHANGE THIS
+ssh: "/home/ubuntu/.ssh"
+ssh_key_path: "/home/ubuntu/.ssh/id_rsa"
 
-##### add git related information
+############################################### ADD GIT RELATED INFORMATION ##############################################################
 
 gitlab_url: "https://git.cwbos.com"
+<<<<<<< HEAD
 gitlab_token: ""   # Replace with your PAT
 gitlab_key_title: "slave-server-key"
 ############################################### CREATING NGINX CONF ###########################################################################
+=======
+gitlab_token: " "   # Replace with your PAT
+gitlab_key_title: "slave-server-key"         ##CHANGE THE TITILE FOR DIFFERENT SERVERS
+############################################### CREATING NGINX CONF #######################################################################
+>>>>>>> 8166316 (main varaible file)
 frontends:
   - name: core
-    port: 3001
+    subdomain: ""
+    port: 30 #60
   - name: pos
-    port: 3002
-  - name: auth
-    port: 3003
+    subdomain: pos
+    port: 40 #70
+  - name: apps
+    subdomain: apps
+    port: 3009 #3000
   - name: hub
-    port: 3004
+    subdomain: hub
+    port: 30004 #3005
+  - name: redis
+    subdomain: ""
+    port: 5664 #6478
+
+
+backend_services:
+  - name: core-services
+    port: 8084
+  - name: retail-services
+    port: 8085
 
 ###############################################CLONING GIT REPOS###############################################################################
 git_repos:
-  - repo_name: core-services
+  - repo_name: cw-core-services
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-core-services.git"
     dest: "{{ repos }}"
-    branch: "25Q2.1.0"  
-
-  - repo_name: retail-services
+    branch: "25Q2.1.0"
+ 
+  - repo_name: cw-retail-services
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-retail-services.git"
     dest: "{{ repos }}"
-    branch: "25Q2.1.0"  
+    branch: "25Q2.1.0"
 
-  - repo_name: pojo-classes
-    repo: "git@git.cwbos.com:cw-enterprise/services/cw-pojo-classes.git"
-    dest: "{{ repos }}"
-    branch: "main"  
-
-  - repo_name: print-templates
+  - repo_name: cw-print-templates
     repo: "git@git.cwbos.com:cw-enterprise/services/cw-print-templates.git"
     dest: "{{ repos }}"
-    branch: "main"  
+    branch: "main"
 
-  - repo_name: cw-core-fronend
+  - repo_name: cw-pojo-classes
+    repo: "git@git.cwbos.com:cw-enterprise/services/cw-pojo-classes.git"
+    dest: "{{ repos }}"
+    branch: "main"
+
+  - repo_name: cw-core-frontend
     repo: "git@git.cwbos.com:cw-plg/front-end/cw-core-front-end.git"
     dest: "{{ repos }}"
     branch: "25Q2.1.0"
 
-  - repo_name: cw-pos-fronend
+
+  - repo_name: fork-plg-pos
     repo: "git@git.cwbos.com:cw-plg/fork-plg-pos.git"
     dest: "{{ repos }}"
-    branch: "25Q2.1.0"
+    branch: "25Q3.1.0"
 
-  - repo_name: cw-auth-fronend
+
+  - repo_name: cw-auth-frontend
     repo: "git@git.cwbos.com:cw-plg/middle-ware/cw-auth.git"
     dest: "{{ repos }}"
     branch: "main"
 
-  - repo_name: cw-hub-fronend
+
+  - repo_name: cw-hub-frontend
     repo: "git@git.cwbos.com:cw-hub/cw-api-hub/cw-api-hub.git"
     dest: "{{ repos }}"
     branch: "25Q2.1.0"
+
+
       
 ############################################### SERVICES ###############################################################################
 # ✅ pom.xml files
 pom_replacements:
   - repo: core-services
     src: "{{ ansible_project }}/files/pom_files/core.pom.xml"
-    dest: "{{ repos }}/core-services/pom.xml"
+    dest: "{{ repos }}/cw-core-services/pom.xml"
 
   - repo: retail-services
     src: "{{ ansible_project }}/files/pom_files/retail.pom.xml"
-    dest: "{{ repos }}/retail-services/pom.xml"
+    dest: "{{ repos }}/cw-retail-services/pom.xml"
 
 
 # ✅ Only symlinks for core-services
 core_links:
-  - src: "{{ repos }}/pojo-classes/tables"
-    dest: "{{ repos }}/core-services/src/main/java/com/cw/erp/model/postgres/tables"
+  - src: "{{ repos }}/cw-pojo-classes/tables"
+    dest: "{{ repos }}/cw-core-services/src/main/java/com/cw/erp/model/postgres/tables"
 
-  - src: "{{ repos }}/print-templates"
-    dest: "{{ repos }}/core-services/src/main/java/com/cw/erp/modules/cw-print-templates"
+  - src: "{{ repos }}/cw-print-templates"
+    dest: "{{ repos }}/cw-core-services/src/main/java/com/cw/erp/modules/cw-print-templates"
 
 #MAVEN BUILDS
 maven_builds:
   - name: core-services
-    path: "{{ repos }}/core-services"
+    path: "{{ repos }}/cw-core-services"
     cmd: "mvn clean install -DskipTests"
 
   - name: retail-services
-    path: "{{ repos }}/retail-services"
+    path: "{{ repos }}/cw-retail-services"
     cmd: "mvn clean install -DskipTests"
 
 #CUSTOM JAT INSTALLATION
 custom_jar:
   src: "{{ ansible_project }}/files/ConvertToCurrency.jar"
-  dest: "{{ repos }}/core-services"    
+  dest: "{{ repos }}/cw-core-services"    
   command: >
     mvn install:install-file
-    -Dfile=/home/rajesh/ansible-project/files/ConvertToCurrency.jar
+    -Dfile={{ repos }}/cw-core-services/ConvertToCurrency.jar
     -DgroupId=com.reporter.jasper
     -DartifactId=ConvertToWordPlugin
     -Dversion=1.0.0
@@ -116,61 +170,98 @@ custom_jar:
 entrypoint:
   - name: entrypoint
     entrypath: "{{ ansible_project }}/files/entrypoint.sh"
-    entrydest: "{{ repos }}/core-services"
+    entrydest: "{{ repos }}/cw-core-services"
 
 #CUSTOM JSON FILE FOR RETAIL SERVICES
 json_file:
   - name: json
     src: "{{ansible_project}}/files/sproutz-food-ordering.json"
-    dest: "{{ repos }}/retail-services/src/main/resources"
+    dest: "{{ repos }}/cw-retail-services/src/main/resources"
 
 #APPLICATION PROPERTIES
 application_propeties:
   - name: core_application
-    src: "{{ ansible_project }}/files/properties_files/core_application.properties"
-    dest: "{{ repos }}/Compose-file/"
+    src: "{{ ansible_project }}/templates/properties-file/core_application.properties"
+    dest: "{{ composefile }}/Compose-file/"
 
   - name: retail_application
-    src: "{{ ansible_project }}/files/properties_files/retail_application.properties"
-    dest: "{{ repos }}/Compose-file/"
+    src: "{{ ansible_project }}/templates/properties-file/retail_application.properties"
+    dest: "{{ composefile }}/Compose-file/"
 
 ############################################### FRONTEND #############################################################################
 envs:
   - name: Core_frontend_env
-    src: "{{ env }}/frontend"
-    dest: "{{ repos }}/cw-core-fronend/.env"
+    src: "{{ templates }}/envs/core-frontend.j2"
+    dest: "{{ repos }}/cw-core-frontend/.env"
   - name: pos_frontend_env
-    src: "{{ env }}/pos"
-    dest: "{{ repos }}/cw-pos-fronend/.env"
+    src: "{{ templates }}/envs/pos-frontend.j2"
+    dest: "{{ repos }}/fork-plg-pos/.env"
   - name: auth_frontend_env
-    src: "{{ env }}/auth"
-    dest: "{{ repos }}/cw-auth-fronend/.env"
+    src: "{{ templates }}/envs/auth-frontend.j2"
+    dest: "{{ repos }}/cw-auth-frontend/.env"
   - name: hub_frontend_env
-    src: "{{ env }}/hub"
-    dest: "{{ repos }}/cw-hub-fronend/.env"
+    src: "{{ templates }}/envs/hub-frontend.j2"
+    dest: "{{ repos }}/cw-hub-frontend/.env"
 
 ############################################### DOCKER ###############################################################################
 
 #DOCKER IMAGES
 docker_images:
   - name: core-services
-    context: "{{ repos }}/core-services"
+    context: "{{ repos }}/cw-core-services"
     dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.core-services"
-    image_name: "core-services:latest"
+    image_name: "core-services:latest"  # IMAGE NAME
 
   - name: retail-services
-    context: "{{ repos }}/retail-services"
+    context: "{{ repos }}/cw-retail-services"
     dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.retail-services"
-    image_name: "retail-services:latest"
+    image_name: "retail-services:latest"   # IMAGE NAME
 
-#DOCKER COMPOSE FILE
+  - name: core-frontend
+    context: "{{ repos }}/cw-core-frontend"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.core_frontend"
+    image_name: "{{docker_name}}-core-frontend:latest"   # IMAGE NAME
+
+  - name: pos-frontend
+    context: "{{ repos }}/fork-plg-pos"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.pos_frontend"
+    image_name: "{{docker_name}}-pos-frontend:latest"   # IMAGE NAME
+
+  - name: auth-frontend
+    context: "{{ repos }}/cw-auth-frontend"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.auth_frontend"
+    image_name: "{{docker_name}}-auth-frontend:latest"   # IMAGE NAME
+
+  - name: hub-frontend
+    context: "{{ repos }}/cw-hub-frontend"
+    dockerfile: "{{ ansible_project }}/files/docker_files/Dockerfile.hub_frontend"
+    image_name: "{{docker_name}}-hub-frontend:latest"   # IMAGE NAME
+
+
+########################################## FRONTEND NGINX CONF FILES #####################################################
+frontend_conf:
+  - name: core-nginx-conf
+    src: "{{templates}}/docker-nginx-conf/core-nginx.conf.j2"
+    dest: "{{composefile}}/Compose-file/core-nginx.conf"
+    
+  - name: pos-nginx-conf
+    src: "{{templates}}/docker-nginx-conf/pos-nginx.conf.j2"
+    dest: "{{composefile}}/Compose-file/pos-nginx.conf"
+########################################## SERVICE LOG DIRECTORIES #######################################################
+log_repos:
+  - name: core-service-logs
+    dest: "{{ composefile }}/Compose-file/core-service-logs"
+
+  - name: retail-service-logs
+    dest: "{{ composefile }}/Compose-file/retail-logs"
+########################################## DOCKER COMPOSE FILE ############################################################
 docker_files:
   - name: Docker-compose
-    src: "{{ ansible_project }}/files/docker_files/docker-compose.yml"
-    dest: "{{ repos }}/Compose-file"
+    src: "{{ ansible_project }}/templates/docker-compose.yml.j2"
+    dest: "{{ composefile }}/Compose-file/docker-compose.yml"
 
 docker_compose:
   - name: compose
-    path: "{{ repos }}/Compose-file"
+    path: "{{ composefile }}/Compose-file"
     cmd: "docker compose up -d"
 

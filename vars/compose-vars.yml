@@ -1,11 +1,39 @@
-project-name: "testing"
+# vars/docker_vars.yml
+network_name: "test.{{docker_name}}"
 
-redis:
-  name: "{{ project-name }}-redis"
-  images: redis:7.2.4-alpine
-  port: 6378
 
-core-services:
-  name: "{{project-name }}-core_services"
-  image:  "{{ (docker_files | selectattr('name','equalto','core-services') | first).image_name }}"
-  
+redis_version: 7.2.4-alpine
+redis_container: "{{ docker_name }}-redis"
+redis_port: "{{ (frontends | selectattr('name', 'equalto', 'redis') | first).port }}"
+
+core_services_image: "{{ (docker_images | selectattr('name', 'equalto', 'core-services') | first).image_name }}"
+core_services_container: "{{ docker_name }}-core-services"
+core_services_port: "{{ (backend_services | selectattr('name','equalto','core-services') | first).port }}"
+
+print_templates_path: "{{ repos }}/cw-print-templates"
+release_management_path: "{{ composefile }}/Release_management"
+# ssh_key_path: "{{ ssh_key_path }}"
+known_hosts_path: "{{ ssh }}/known_hosts"
+
+retail_services_image: "{{ (docker_images | selectattr('name', 'equalto', 'retail-services') | first).image_name }}"
+retail_services_container: "{{ docker_name }}-retail-services"
+retail_services_port: "{{ (backend_services | selectattr('name','equalto','retail-services') | first).port }}"
+
+# ✅ FRONTEND ports dynamically from base_paths.yml
+
+core_frontend_image: "{{ (docker_images | selectattr('name', 'equalto', 'core-frontend') | first).image_name }}"
+core_frontend_container: "{{ docker_name }}-core-frontend"
+core_frontend_port: "{{ (frontends | selectattr('name','equalto','core') | first).port }}"
+
+pos_frontend_image: "{{ (docker_images | selectattr('name', 'equalto', 'pos-frontend') | first).image_name }}"
+pos_frontend_container: "{{docker_name}}-pos-frontend"
+pos_frontend_port: "{{ (frontends | selectattr('name','equalto','pos') | first).port }}"
+
+auth_frontend_image: "{{ (docker_images | selectattr('name', 'equalto', 'auth-frontend') | first).image_name }}"
+auth_frontend_container: "{{ docker_name }}-auth-frontend"
+auth_frontend_port: "{{ (frontends | selectattr('name','equalto','apps') | first).port }}"
+
+hub_frontend_image: "{{ (docker_images | selectattr('name', 'equalto', 'hub-frontend') | first).image_name }}"
+hub_frontend_container: "{{ docker_name }}-hub"
+hub_frontend_port: "{{ (frontends | selectattr('name','equalto','hub') | first).port }}"
+
