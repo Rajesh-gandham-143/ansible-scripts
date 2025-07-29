@@ -5,30 +5,35 @@
 
 user: "ubuntu"   # ownership of files
 
-############################################################# MAIN URL #########################################################################
+############################################### DOCKER PART ##############################################################################
+docker_name: 'anusham' # THIS IS TO DEFINE THE NAME OF CONTAINERS, IMAGES IN DOCKER AND POSTGRES PASSWORD  
 
-base_domain: 'ansible.cwcloud.in'
-main_domain: '.cwcloud.in'
+############################################### RABBIT-MQ DETAILS ########################################################################
+mq_user: ''
+mq_password: ''
+############################################################# MAIN URL ####################################################################
 
-certbot_email: 'rajesh.g@exceloid.com'
+base_domain: '{{docker_name}}.cwsuite.com'
+main_domain: '.cwsuite.com'
+
+certbot_email: 'naveen.ankem@exceloid.com'
 certbot_subdomains:
   - "{{ base_domain }}"
   - "pos.{{ base_domain }}"
   - "apps.{{ base_domain }}"
   - "hub.{{ base_domain }}"
   - "services.{{ base_domain }}"
-############################################### DOCKER PART ##############################################################################
-docker_name: 'ansible' # THIS IS TO DEFINE THE NAME OF CONTAINERS AND IMAGES IN DOCKER  
+ 
 
 ############################################################# DATABASE RELATED INFORMATION ##############################################
 postgres_version: 16
-postgres_port: 8641         
-postgres_host: 157.180.85.90
-postgres_password: "ansible@123"
+postgres_port:          
+postgres_host: 
+postgres_password: ""
 db_name: "{{docker_name}}"
 db_user: postgres
 
-tad_password: "exceloid@123"
+tad_password: ""
 ############################################### DEFINE THE PATH OF MASTER SERVER #########################################################
 
 ansible_project: '/home/rajesh/ansible-project'
@@ -37,7 +42,7 @@ templates: '/home/rajesh/ansible-project/templates'
 ############################################### DEFINE THE PATH OF SLAVE SERVER ##########################################################
 
 repos: '/home/ubuntu/repos'                  
-composefile: '/home/ubuntu/ansible'          ##NEED TO CHANGE THIS
+composefile: '/home/ubuntu/{{docker_name}}'          ##NEED TO CHANGE THIS
 ssh: "/home/ubuntu/.ssh"
 ssh_key_path: "/home/ubuntu/.ssh/id_rsa"
 
@@ -50,26 +55,26 @@ gitlab_key_title: "slave-server-key"         ##CHANGE THE TITILE FOR DIFFERENT S
 frontends:
   - name: core
     subdomain: ""
-    port: 30 #60
+    port: 40
   - name: pos
     subdomain: pos
-    port: 40 #70
+    port: 50
   - name: apps
     subdomain: apps
-    port: 3009 #3000
+    port: 5688
   - name: hub
     subdomain: hub
-    port: 30004 #3005
+    port: 4010
   - name: redis
     subdomain: ""
-    port: 5664 #6478
+    port: 6487
 
 
 backend_services:
   - name: core-services
-    port: 8084
+    port: 8090
   - name: retail-services
-    port: 8085
+    port: 8070
 
 ###############################################CLONING GIT REPOS###############################################################################
 git_repos:
