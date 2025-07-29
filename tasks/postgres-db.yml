@@ -38,13 +38,19 @@
 - name: Restart PostgreSQL cluster after config change
   command: pg_ctlcluster {{ postgres_version }} main restart
 
-- name: Set password for postgres superuser
-  become_user: postgres
-  community.postgresql.postgresql_user:
-    name: postgres
-    password: "{{ postgres_password }}"
-    login_unix_socket: "/var/run/postgresql"   # ✅ only directory
-    port: "{{ postgres_port }}"   
+# - name: Set password for postgres superuser
+#   become: yes
+#   become_user: postgres
+#   community.postgresql.postgresql_user:
+#     name: postgres
+#     password: "{{ postgres_password }}"
+#     login_unix_socket: "/var/run/postgresql"   # ✅ only directory
+#     port: "{{ postgres_port }}"   
+
+- name: Set password for postgres superuser (workaround)
+  become: yes
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '{{ postgres_password }}';"
 
 
 # ✅ 7. Restart cluster to apply port + remote access
@@ -56,7 +62,7 @@
   community.postgresql.postgresql_info:
     login_user: postgres
     login_password: "{{ postgres_password }}"
-    login_host: "{{ postgres_host }}"
+    login_host: "localhost"
     login_port: "{{ postgres_port }}"
   register: pg_info
   failed_when: false  # Don't fail if DB doesn't exist yet
