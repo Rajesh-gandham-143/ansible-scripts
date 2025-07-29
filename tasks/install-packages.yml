@@ -1,6 +1,4 @@
----
 - name: Remove old Docker versions if present
-  become: yes
   apt:
     name:
       - docker
@@ -13,35 +11,34 @@
       - runc
     state: absent
 
+# -----------------------------------
+# UPDATE PACKAGE CACHE
+# -----------------------------------
 - name: Update apt cache
-  become: yes
   apt:
     update_cache: yes
 
+# -----------------------------------
+# INSTALL JAVA 17
+# -----------------------------------
 - name: Install OpenJDK 17
-  become: yes
   apt:
     name: openjdk-17-jdk
     state: present
 
-- name: Set Java 17 as default
-  become: yes
+- name: Set Java 17 as default using update-java-alternatives
   shell: |
-    update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 171
-    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 171
-    update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-    update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
+    update-java-alternatives -s $(update-java-alternatives -l | grep 'java-1.17' | awk '{print $1}')
+  register: set_java
+  changed_when: "'no alternatives' not in set_java.stderr"
 
 - name: Verify Java version
   command: java -version
 
-- name: Update apt cache
-  become: yes
-  apt:
-    update_cache: yes
-
+# -----------------------------------
+# INSTALL BASE UTILITIES
+# -----------------------------------
 - name: Install required base packages
-  become: yes
   apt:
     name:
       - ca-certificates
@@ -59,8 +56,10 @@
       - postgresql-client-{{ postgres_version }}
     state: present
 
+# -----------------------------------
+# INSTALL DOCKER
+# -----------------------------------
 - name: Add Docker’s official GPG key
-  become: yes
   shell: |
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -69,20 +68,16 @@
     creates: /etc/apt/keyrings/docker.gpg
 
 - name: Add Docker repository
-  become: yes
   shell: |
-    echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
-    > /etc/apt/sources.list.d/docker.list
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  args:
+    creates: /etc/apt/sources.list.d/docker.list
 
 - name: Update apt cache after adding Docker repo
-  become: yes
   apt:
     update_cache: yes
 
 - name: Install Docker Engine
-  become: yes
   apt:
     name:
       - docker-ce
@@ -93,33 +88,32 @@
     state: present
 
 - name: Ensure Docker service is running
-  become: yes
   systemd:
     name: docker
     state: started
     enabled: yes
 
+# -----------------------------------
+# ENSURE NGINX IS RUNNING
+# -----------------------------------
 - name: Ensure nginx service is running
-  become: yes
   systemd:
     name: nginx
     state: started
     enabled: yes
 
+# -----------------------------------
+# PYTHON DOCKER SDK & PERMISSIONS
+# -----------------------------------
 - name: Install Python Docker SDK
-  become: yes
   shell: |
     python3 -m pip install docker --break-system-packages
 
-
 - name: Add current user to docker group
-  become: yes
   user:
-    name: "{{ ansible_user_id }}"
+    name: "{{ user }}"
     groups: docker
     append: yes
 
-
-- name: Verify Docker is working (using sudo for current session)
-  become: yes
+- name: Verify Docker is working (using sudo)
   shell: docker ps
