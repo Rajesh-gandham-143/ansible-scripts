@@ -76,14 +76,13 @@ This file contains Docker-specific variables such as:
 ```bash
 
 git clone <your-ansible-repo-url>
-cd ansible-project
+cd ansible-scripts
 
 ```
 **Edit the variable files**
 ```bash
 
 nano vars/projects.yml
-nano vars/compose-vars.yml
 ```
 
 **Run the playbook**
