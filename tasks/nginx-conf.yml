@@ -1,22 +1,28 @@
 ---
-- name: Generate Nginx config for frontends
+- name: Check if Nginx config already exists
+  stat:
+    path: "/etc/nginx/sites-available/{{ base_domain }}.conf"
+  register: nginx_conf_stat
+
+- name: Generate Nginx config for frontends (only if missing)
   template:
     src: templates/nginx-frontend.conf.j2
-    dest: "/etc/nginx/sites-available/{{base_domain}}.conf"
+    dest: "/etc/nginx/sites-available/{{ base_domain }}.conf"
+  when: not nginx_conf_stat.stat.exists
   notify: Restart Nginx
 
-- name: Enable site
+- name: Enable site (only if missing)
   file:
-    src: "/etc/nginx/sites-available/{{base_domain}}.conf"
-    dest: "/etc/nginx/sites-enabled/{{base_domain}}.conf"
+    src: "/etc/nginx/sites-available/{{ base_domain }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ base_domain }}.conf"
     state: link
+  when: not nginx_conf_stat.stat.exists
   notify: Restart Nginx
-    
+
 - name: Test Nginx config
   command: nginx -t
   register: nginx_test
   failed_when: nginx_test.rc != 0
-
 
 - name: Debug nginx test
   debug:
@@ -26,8 +32,6 @@
   service:
     name: nginx
     state: restarted
-
-
 
 - name: Obtain SSL certs for all domains
   command: >
