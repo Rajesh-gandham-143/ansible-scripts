@@ -74,7 +74,7 @@
     password: "{{ postgres_password }}"   # SAME PASSWORD as postgres
     login_user: postgres
     login_password: "{{ postgres_password }}"
-    login_host: "{{ postgres_host }}"
+    login_host: localhost
     login_port: "{{ postgres_port }}"
     state: present
 
