@@ -11,10 +11,7 @@
       include_tasks: tasks/install-packages.yml 
 
     - name: Configuring the nginx url's
-      include_tasks: tasks/nginx-conf.yml
-
-    - name: Configuring and Creating postgres DATABASE
-      include_tasks: tasks/postgres-db.yml
+      include_tasks: tasks/nginx-conf.yml  
 
     - name: Checking ssh connection
       include_tasks: tasks/ssh-agent.yml

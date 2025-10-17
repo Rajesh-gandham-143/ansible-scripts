@@ -1,6 +1,28 @@
 
 
 services:
+
+  postgres:
+    image: postgres:16
+    container_name: {{ docker_name }}-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: {{ db_user }}
+      POSTGRES_PASSWORD: {{ postgres_password }}
+      TZ: Asia/Kolkata
+    ports:
+      - "{{ postgres_port }}:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: bash -c "ln -sf /usr/share/zoneinfo/Asia/Kolkata /usr/share/zoneinfo/Asia/Calcutta && docker-entrypoint.sh postgres"
+    networks:
+      - {{ network_name }}
+
+
   {{ redis_container }}:
     image: redis:{{ redis_version }}
     container_name: {{ redis_container }}
